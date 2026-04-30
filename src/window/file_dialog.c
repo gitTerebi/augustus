@@ -216,6 +216,22 @@ static int select_correct_index(void)
     return 0;
 }
 
+static int select_latest_file(void)
+{
+    if (data.filtered_file_list.num_files <= 0) {
+        return 0;
+    }
+
+    int latest_index = 0;
+    for (int i = 1; i < data.filtered_file_list.num_files; i++) {
+        if (data.filtered_file_list.files[i].modified_time > data.filtered_file_list.files[latest_index].modified_time) {
+            latest_index = i;
+        }
+    }
+    list_box_select_index(&list_box, latest_index);
+    return latest_index;
+}
+
 static void init(file_type type, file_dialog_type dialog_type)
 {
     data.type = type;
@@ -279,6 +295,9 @@ static void init(file_type type, file_dialog_type dialog_type)
     }
     init_filtered_file_list();
     list_box_init(&list_box, data.filtered_file_list.num_files);
+    if (data.type == FILE_TYPE_SAVED_GAME && data.dialog_type == FILE_DIALOG_LOAD) {
+        list_box_show_index(&list_box, select_latest_file());
+    }
 
     if (data.dialog_type == FILE_DIALOG_SAVE) {
         main_input.placeholder = 0;
