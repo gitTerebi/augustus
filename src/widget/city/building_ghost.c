@@ -1545,16 +1545,17 @@ const city_overlay *city_building_ghost_get_overlay(void)
     switch(type) {
         case BUILDING_RESERVOIR:
         case BUILDING_DRAGGABLE_RESERVOIR:
-        case BUILDING_FOUNTAIN:
         case BUILDING_GRAND_TEMPLE_NEPTUNE:
         case BUILDING_CONCRETE_MAKER:
             return city_overlay_for_water_building_ghost(show_reservoir_range, show_water_structure_range);
+        case BUILDING_FOUNTAIN:
+            return city_overlay_for_water_building_ghost(1, show_water_structure_range);
         case BUILDING_WELL:
             return city_overlay_for_water_building_ghost(0, show_water_structure_range);
         case BUILDING_BATHHOUSE:
             return city_overlay_for_water_building_ghost(show_reservoir_range, 0);
         case BUILDING_HOUSE_VACANT_LOT:
-            return city_overlay_for_water_building_ghost(0, config_get(CONFIG_UI_SHOW_WATER_STRUCTURE_RANGE_HOUSES));
+            return city_overlay_for_water_building_ghost(0, 1);
         default:
             return 0;
     }

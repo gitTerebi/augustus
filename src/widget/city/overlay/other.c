@@ -662,6 +662,27 @@ static int is_inhabited_building(int grid_offset)
     return b && b->house_population > 0;
 }
 
+static int grid_offset_in_building_range(int grid_offset, const building *b, int size, int radius)
+{
+    int x = map_grid_offset_to_x(grid_offset);
+    int y = map_grid_offset_to_y(grid_offset);
+    int x_min, y_min, x_max, y_max;
+    map_grid_get_area(b->x, b->y, size, radius, &x_min, &y_min, &x_max, &y_max);
+    return x >= x_min && x <= x_max && y >= y_min && y <= y_max;
+}
+
+static int grid_offset_in_water_building_range(int grid_offset, building_type type, int size, int radius)
+{
+    for (building *b = building_first_of_type(type); b; b = b->next_of_type) {
+        if (b->state != BUILDING_STATE_UNUSED && b->state != BUILDING_STATE_RUBBLE &&
+            b->state != BUILDING_STATE_DELETED_BY_GAME && b->state != BUILDING_STATE_DELETED_BY_PLAYER &&
+            grid_offset_in_building_range(grid_offset, b, size, radius)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static void blend_color_to_footprint(int x, int y, int size, color_t color, float scale)
 {
     int total_steps = size * 2 - 1;
@@ -742,7 +763,8 @@ static void draw_water_graph(int x, int y, float scale, int grid_offset)
 
     if (water_building_ghost_settings.show_reservoir_range &&
         (!show_building_water(b) || (is_inhabited_building(grid_offset) && !water_building_ghost_settings.show_fountain_well_range)) &&
-        map_terrain_is(grid_offset, TERRAIN_RESERVOIR_RANGE)) {
+        (map_terrain_is(grid_offset, TERRAIN_RESERVOIR_RANGE) ||
+        grid_offset_in_water_building_range(grid_offset, BUILDING_RESERVOIR, 3, map_water_supply_reservoir_radius()))) {
         color_t color_to_use = map_terrain_is(grid_offset, TERRAIN_ROAD) ?
             ALPHA_MASK_SEMI_TRANSPARENT : water_building_ghost_settings.reservoir_range_color;
         image_draw_isometric_footprint_from_draw_tile(assets_lookup_image_id(ASSET_UI_RESERVOIR_RANGE), x, y,
@@ -767,7 +789,9 @@ static void draw_water_graph(int x, int y, float scale, int grid_offset)
                 }
                 // intentional fallthrough
             case 2:
-                if (b->house_size && b->has_water_access) {
+                if (b->house_size && (b->has_water_access ||
+                    grid_offset_in_water_building_range(grid_offset, BUILDING_FOUNTAIN, 1,
+                    map_water_supply_fountain_radius()))) {
                     water_color = COLOR_MASK_BLUE;
                 }
                 break;
@@ -781,7 +805,8 @@ static void draw_water_graph(int x, int y, float scale, int grid_offset)
         return;
     }
 
-    if (map_terrain_is(grid_offset, TERRAIN_FOUNTAIN_RANGE)) {
+    if (map_terrain_is(grid_offset, TERRAIN_FOUNTAIN_RANGE) ||
+        grid_offset_in_water_building_range(grid_offset, BUILDING_FOUNTAIN, 1, map_water_supply_fountain_radius())) {
         image_draw_isometric_footprint_from_draw_tile(assets_lookup_image_id(ASSET_UI_FOUNTAIN_RANGE), x, y,
             COLOR_MASK_BLUE, scale);
     } else if (has_well_access(grid_offset)) {
