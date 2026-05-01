@@ -3,9 +3,11 @@
 #include "assets/assets.h"
 #include "core/calc.h"
 #include "core/config.h"
+#include "core/dir.h"
 #include "core/string.h"
 #include "editor/editor.h"
 #include "game/campaign.h"
+#include "game/file.h"
 #include "game/game.h"
 #include "game/system.h"
 #include "graphics/generic_button.h"
@@ -20,6 +22,7 @@
 #include "graphics/window.h"
 #include "sound/music.h"
 #include "window/cck_selection.h"
+#include "window/city.h"
 #include "window/config.h"
 #include "window/editor/map.h"
 #include "window/file_dialog.h"
@@ -28,7 +31,7 @@
 #include "window/select_campaign.h"
 #include "window/video.h"
 
-#define MAX_BUTTONS 6
+#define MAX_BUTTONS 7
 
 static void button_click(const generic_button *button);
 
@@ -38,13 +41,60 @@ static struct {
 } data;
 
 static generic_button buttons[] = {
-    {192, 130, 256, 25, button_click, 0, 1},
-    {192, 170, 256, 25, button_click, 0, 2},
-    {192, 210, 256, 25, button_click, 0, 3},
-    {192, 250, 256, 25, button_click, 0, 4},
-    {192, 290, 256, 25, button_click, 0, 5},
-    {192, 330, 256, 25, button_click, 0, 6},
+    {192, 120, 256, 25, button_click, 0, 1},
+    {192, 155, 256, 25, button_click, 0, 2},
+    {192, 190, 256, 25, button_click, 0, 3},
+    {192, 225, 256, 25, button_click, 0, 4},
+    {192, 260, 256, 25, button_click, 0, 5},
+    {192, 295, 256, 25, button_click, 0, 6},
+    {192, 330, 256, 25, button_click, 0, 7},
 };
+
+static int find_latest_save(char *filename)
+{
+    const dir_listing *file_list = dir_find_files_with_extension_at_location(PATH_LOCATION_SAVEGAME, "sav");
+    file_list = dir_append_files_with_extension("svx");
+    if (file_list->num_files <= 0) {
+        return 0;
+    }
+
+    int latest_index = 0;
+    for (int i = 1; i < file_list->num_files; i++) {
+        if (file_list->files[i].modified_time > file_list->files[latest_index].modified_time) {
+            latest_index = i;
+        }
+    }
+    snprintf(filename, FILE_NAME_MAX, "%s", file_list->files[latest_index].name);
+    return 1;
+}
+
+static void continue_latest_save(void)
+{
+    char filename[FILE_NAME_MAX];
+    if (!find_latest_save(filename)) {
+        window_plain_message_dialog_show(TR_SAVE_DIALOG_FILE_DOES_NOT_EXIST_TITLE,
+            TR_SAVE_DIALOG_FILE_DOES_NOT_EXIST_TEXT, 1);
+        return;
+    }
+
+    const char *full_path = dir_get_file_at_location(filename, PATH_LOCATION_SAVEGAME);
+    if (!full_path) {
+        window_plain_message_dialog_show(TR_SAVE_DIALOG_FILE_DOES_NOT_EXIST_TITLE,
+            TR_SAVE_DIALOG_FILE_DOES_NOT_EXIST_TEXT, 1);
+        return;
+    }
+
+    int result = game_file_load_saved_game(full_path);
+    if (result == FILE_LOAD_SUCCESS) {
+        window_city_show();
+    } else if (result == FILE_LOAD_INCOMPATIBLE_VERSION) {
+        window_plain_message_dialog_show(TR_SAVEGAME_LARGER_VERSION_TITLE,
+            TR_SAVEGAME_LARGER_VERSION_MESSAGE, 1);
+    } else {
+        window_plain_message_dialog_show(TR_SAVE_DIALOG_INVALID_FILE,
+            TR_SAVE_DIALOG_INVALID_FILE_DESC, 1);
+    }
+}
 
 static void draw_version_string(void)
 {
@@ -88,11 +138,12 @@ static void draw_foreground(void)
             data.focus_button_id == i + 1 ? 1 : 0);
     }
 
-    lang_text_draw_centered(CUSTOM_TRANSLATION, TR_MAIN_MENU_SELECT_CAMPAIGN, 192, 137, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(30, 2, 192, 177, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(30, 3, 192, 217, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(9, 8, 192, 257, 256, FONT_NORMAL_GREEN);
-    lang_text_draw_centered(2, 0, 192, 297, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(CUSTOM_TRANSLATION, TR_MAIN_MENU_CONTINUE_GAME, 192, 127, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(CUSTOM_TRANSLATION, TR_MAIN_MENU_SELECT_CAMPAIGN, 192, 162, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(30, 2, 192, 197, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(30, 3, 192, 232, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(9, 8, 192, 267, 256, FONT_NORMAL_GREEN);
+    lang_text_draw_centered(2, 0, 192, 302, 256, FONT_NORMAL_GREEN);
     lang_text_draw_centered(30, 5, 192, 337, 256, FONT_NORMAL_GREEN);
 
     graphics_reset_dialog();
@@ -124,12 +175,14 @@ static void button_click(const generic_button *button)
     int type = button->parameter1;
 
     if (type == 1) {
-        window_select_campaign_show();
+        continue_latest_save();
     } else if (type == 2) {
-        window_file_dialog_show(FILE_TYPE_SAVED_GAME, FILE_DIALOG_LOAD);
+        window_select_campaign_show();
     } else if (type == 3) {
-        window_cck_selection_show();
+        window_file_dialog_show(FILE_TYPE_SAVED_GAME, FILE_DIALOG_LOAD);
     } else if (type == 4) {
+        window_cck_selection_show();
+    } else if (type == 5) {
         if (!editor_is_present() || !game_init_editor()) {
             window_plain_message_dialog_show(
                 TR_NO_EDITOR_TITLE, TR_NO_EDITOR_MESSAGE, 1);
@@ -137,9 +190,9 @@ static void button_click(const generic_button *button)
             if (config_get(CONFIG_UI_SHOW_INTRO_VIDEO)) window_video_show("map_intro.smk", window_editor_map_show);
             sound_music_play_editor();
         }
-    } else if (type == 5) {
-        window_config_show(CONFIG_FIRST_PAGE, 0, 1);
     } else if (type == 6) {
+        window_config_show(CONFIG_FIRST_PAGE, 0, 1);
+    } else if (type == 7) {
         window_popup_dialog_show(POPUP_DIALOG_QUIT, confirm_exit, 1);
     }
 }
