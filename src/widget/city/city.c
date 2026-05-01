@@ -1,6 +1,7 @@
 #include "city.h"
 
 #include "building/construction.h"
+#include "building/copy_cursor.h"
 #include "building/properties.h"
 #include "building/rotation.h"
 #include "city/finance.h"
@@ -608,6 +609,9 @@ static void handle_mouse(const mouse *m)
     map_tile *tile = &data.current_tile;
     update_city_view_coords(m->x, m->y, tile);
     building_construction_reset_draw_as_constructing();
+    if (building_copy_cursor_handle_mouse(m, tile)) {
+        return;
+    }
     if (m->left.went_down) {
         if (handle_legion_click(tile)) {
             return;
@@ -673,7 +677,10 @@ void widget_city_handle_input(const mouse *m, const hotkeys *h)
     }
 
     if (h->escape_pressed) {
-        if (building_construction_type()) {
+        if (building_copy_cursor_is_active()) {
+            building_copy_cursor_cancel();
+            window_request_refresh();
+        } else if (building_construction_type()) {
             building_construction_cancel();
             window_request_refresh();
         } else {

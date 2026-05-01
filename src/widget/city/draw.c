@@ -5,6 +5,7 @@
 #include "building/connectable.h"
 #include "building/construction.h"
 #include "building/construction_clear.h"
+#include "building/copy_cursor.h"
 #include "building/dock.h"
 #include "building/granary.h"
 #include "building/image.h"
@@ -1183,6 +1184,11 @@ static void draw_overlay(int x, int y, int grid_offset)
     draw_context.overlay->draw_layer(x, y, draw_context.scale, grid_offset);
 }
 
+static void draw_copy_cursor_preview(int x, int y, int grid_offset)
+{
+    building_copy_cursor_draw_preview(x, y, grid_offset, draw_context.scale);
+}
+
 static void draw_connectable_construction_ghost(int x, int y, int grid_offset)
 {
     if (!map_property_is_constructing(grid_offset)) {
@@ -1252,6 +1258,9 @@ void city_draw(int selected_figure_id, pixel_coordinate *figure_coord, const map
     int x, y, width, height;
     city_view_get_viewport(&x, &y, &width, &height);
     graphics_fill_rect(x, y, width, height, COLOR_BLACK);
+    if (building_copy_cursor_is_active()) {
+        building_copy_cursor_update_preview(tile);
+    }
     int should_mark_deleting = city_building_ghost_mark_deleting(tile);
     city_view_foreach_valid_map_tile(draw_footprint);
     if (!should_mark_deleting) {
@@ -1262,6 +1271,9 @@ void city_draw(int selected_figure_id, pixel_coordinate *figure_coord, const map
         );
         if (draw_context.overlay->draw_layer) {
             city_view_foreach_valid_map_tile(draw_overlay);
+        }
+        if (building_copy_cursor_is_active()) {
+            city_view_foreach_valid_map_tile(draw_copy_cursor_preview);
         }
         if (!selected_figure_id) {
             if (building_is_connectable(building_construction_type())) {

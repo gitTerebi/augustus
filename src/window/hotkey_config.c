@@ -19,7 +19,7 @@
 #include "translation/translation.h"
 #include "window/config.h"
 #include "window/hotkey_editor.h"
-#include "window/plain_message_dialog.h"
+#include "window/popup_dialog.h"
 
 #define TR_NONE -1
 #define GROUP_BUILDINGS 28
@@ -32,6 +32,7 @@ static void on_scroll(void);
 static void button_hotkey(const generic_button *button);
 static void button_reset_defaults(const generic_button *button);
 static void button_close(const generic_button *button);
+static void replace_duplicate_hotkey(int accepted, int checked);
 
 static scrollbar_type scrollbar = { 580, 72, 352, 560, NUM_VISIBLE_OPTIONS, on_scroll, 1 };
 
@@ -77,6 +78,8 @@ static hotkey_widget hotkey_widgets[] = {
     {HOTKEY_SHOW_MESSAGES, TR_HOTKEY_SHOW_MESSAGES},
     {HOTKEY_HEADER, TR_HOTKEY_HEADER_BUILD},
     {HOTKEY_BUILD_CLONE, TR_HOTKEY_BUILD_CLONE},
+    {HOTKEY_BUILD_COPY_CURSOR, TR_HOTKEY_BUILD_COPY_CURSOR},
+    {HOTKEY_COPY_CURSOR_MIRROR, TR_HOTKEY_COPY_CURSOR_MIRROR},
     {HOTKEY_COPY_BUILDING_SETTINGS, TR_HOTKEY_COPY_SETTINGS},
     {HOTKEY_PASTE_BUILDING_SETTINGS, TR_HOTKEY_PASTE_SETTINGS},
     {HOTKEY_MOTHBALL_TOGGLE, TR_HOTKEY_MOTHBALL_TOGGLE},
@@ -232,6 +235,16 @@ static struct {
     unsigned int focus_button;
     unsigned int bottom_focus_button;
     hotkey_mapping mappings[HOTKEY_MAX_ITEMS][2];
+    struct {
+        int is_active;
+        hotkey_action action;
+        int index;
+        hotkey_action duplicate_action;
+        int duplicate_index;
+        key_type key;
+        key_modifier_type modifiers;
+        uint8_t message[600];
+    } pending_duplicate;
 } data;
 
 int get_position_for_widget(translation_key key)
@@ -382,34 +395,62 @@ static const uint8_t *hotkey_action_name_for(hotkey_action action)
 
 static void set_hotkey(hotkey_action action, int index, key_type key, key_modifier_type modifiers)
 {
-    int is_duplicate_hotkey = 0;
     // check if new key combination already assigned to another action
     if (key != KEY_TYPE_NONE) {
         for (int test_action = 0; test_action < HOTKEY_MAX_ITEMS; test_action++) {
             for (int test_index = 0; test_index < 2; test_index++) {
                 if (data.mappings[test_action][test_index].key == key
                     && data.mappings[test_action][test_index].modifiers == modifiers) {
-                    is_duplicate_hotkey = 1;
                     // example explanation next "if" check:
                     // "Fire overlay" already has hotkey "F" and user tries set same hotkey "F" again to "Fire overlay"
                     // we must skip show warning window for better user experience
-                    if (!(test_action == action && test_index == index)) {
-                        window_plain_message_dialog_show_with_extra(
-                            TR_HOTKEY_DUPLICATE_TITLE, TR_HOTKEY_DUPLICATE_MESSAGE,
-                            hotkey_action_name_for(test_action), 0);
+                    if (test_action == action && test_index == index) {
+                        data.mappings[action][index].key = key;
+                        data.mappings[action][index].modifiers = modifiers;
+                    } else {
+                        data.pending_duplicate.is_active = 1;
+                        data.pending_duplicate.action = action;
+                        data.pending_duplicate.index = index;
+                        data.pending_duplicate.duplicate_action = test_action;
+                        data.pending_duplicate.duplicate_index = test_index;
+                        data.pending_duplicate.key = key;
+                        data.pending_duplicate.modifiers = modifiers;
+                        uint8_t *cursor = string_copy(translation_for(TR_HOTKEY_DUPLICATE_MESSAGE),
+                            data.pending_duplicate.message, sizeof(data.pending_duplicate.message));
+                        cursor = string_copy(string_from_ascii("\n"), cursor,
+                            sizeof(data.pending_duplicate.message) - (cursor - data.pending_duplicate.message));
+                        cursor = string_copy(hotkey_action_name_for(test_action), cursor,
+                            sizeof(data.pending_duplicate.message) - (cursor - data.pending_duplicate.message));
+                        cursor = string_copy(string_from_ascii("\n"), cursor,
+                            sizeof(data.pending_duplicate.message) - (cursor - data.pending_duplicate.message));
+                        string_copy(translation_for(TR_HOTKEY_DUPLICATE_REPLACE_MESSAGE), cursor,
+                            sizeof(data.pending_duplicate.message) - (cursor - data.pending_duplicate.message));
+                        window_popup_dialog_show_confirmation(translation_for(TR_HOTKEY_DUPLICATE_TITLE),
+                            data.pending_duplicate.message, 0, replace_duplicate_hotkey);
                     }
-                    break;
+                    return;
                 }
-            }
-            if (is_duplicate_hotkey) {
-                break;
             }
         }
     }
-    if (!is_duplicate_hotkey) {
-        data.mappings[action][index].key = key;
-        data.mappings[action][index].modifiers = modifiers;
+    data.mappings[action][index].key = key;
+    data.mappings[action][index].modifiers = modifiers;
+}
+
+static void replace_duplicate_hotkey(int accepted, int checked)
+{
+    if (!data.pending_duplicate.is_active) {
+        return;
     }
+    if (accepted) {
+        data.mappings[data.pending_duplicate.duplicate_action][data.pending_duplicate.duplicate_index].key = KEY_TYPE_NONE;
+        data.mappings[data.pending_duplicate.duplicate_action][data.pending_duplicate.duplicate_index].modifiers = KEY_MOD_NONE;
+        data.mappings[data.pending_duplicate.action][data.pending_duplicate.index].key = data.pending_duplicate.key;
+        data.mappings[data.pending_duplicate.action][data.pending_duplicate.index].modifiers =
+            data.pending_duplicate.modifiers;
+        window_invalidate();
+    }
+    data.pending_duplicate.is_active = 0;
 }
 
 static void button_hotkey(const generic_button *button)

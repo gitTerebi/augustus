@@ -324,6 +324,12 @@ static void set_definition_for_action(hotkey_action action, hotkey_definition *d
         case HOTKEY_BUILD_CLONE:
             def->action = &data.hotkey_state.clone_building;
             break;
+        case HOTKEY_BUILD_COPY_CURSOR:
+            def->action = &data.hotkey_state.copy_cursor;
+            break;
+        case HOTKEY_COPY_CURSOR_MIRROR:
+            def->action = &data.hotkey_state.copy_cursor_mirror;
+            break;
         case HOTKEY_UNDO:
             def->action = &data.hotkey_state.undo;
             break;

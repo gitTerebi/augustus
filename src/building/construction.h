@@ -48,6 +48,7 @@ figure_type building_construction_nearby_enemy_type(grid_slice *slice);
 void building_construction_offset_start_from_orientation(int *x, int *y, int size);
 
 void building_construction_place(void);
+int building_construction_place_exact(building_type type, int x, int y, int rotation);
 
 int building_construction_can_place_on_terrain(int x, int y, int *warning_id);
 

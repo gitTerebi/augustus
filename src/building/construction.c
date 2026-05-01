@@ -1226,6 +1226,40 @@ void building_construction_place(void)
     game_undo_finish_build(placement_cost);
 }
 
+int building_construction_place_exact(building_type type, int x, int y, int rotation)
+{
+    if (!type) {
+        return 0;
+    }
+    building_construction_set_type(type, rotation);
+    int grid_offset = map_grid_offset(x, y);
+    if (building_construction_is_updatable()) {
+        building_construction_start(x, y, grid_offset);
+        if (!building_construction_in_progress()) {
+            return 0;
+        }
+        building_construction_update(x, y, grid_offset);
+        building_construction_place();
+        return 1;
+    }
+    if (city_finance_out_of_money()) {
+        city_warning_show(WARNING_OUT_OF_MONEY, NEW_WARNING_SLOT);
+        return 0;
+    }
+    if (!game_undo_start_build(type)) {
+        return 0;
+    }
+    if (!building_construction_place_building(type, x, y, 1)) {
+        game_undo_restore_building_state();
+        return 0;
+    }
+    int placement_cost = model_get_building(type)->cost;
+    formation_move_herds_away(x, y);
+    city_finance_process_construction(placement_cost);
+    game_undo_finish_build(placement_cost);
+    return 1;
+}
+
 static void set_warning(int *warning_id, int warning)
 {
     if (warning_id) {

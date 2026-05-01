@@ -14,7 +14,8 @@
 
 #define HOTKEY_CONFIG_UNVERSIONED 0
 #define HOTKEY_CONFIG_ZOOM 1
-#define HOTKEY_CURRENT_VERSION HOTKEY_CONFIG_ZOOM
+#define HOTKEY_CONFIG_COPY_CURSOR 2
+#define HOTKEY_CURRENT_VERSION HOTKEY_CONFIG_COPY_CURSOR
 
 static const char *INI_FILENAME = "augustus-hotkeys.ini";
 
@@ -145,7 +146,9 @@ static const char *ini_keys[] = {
     "editor_empire_tool_land_point",
     "editor_empire_tool_sea_point",
     "editor_empire_tool_selection",
-    "editor_empire_pick_tool"
+    "editor_empire_pick_tool",
+    "build_copy_cursor",
+    "copy_cursor_mirror"
 };
 
 static struct {
@@ -200,6 +203,8 @@ static void init_defaults(void)
     set_mapping(KEY_TYPE_MIDDLE_MOUSE_BUTTON, KEY_MOD_NONE, HOTKEY_RESET_ZOOM);
     set_layout_mapping("R", KEY_TYPE_R, KEY_MOD_NONE, HOTKEY_ROTATE_BUILDING);
     set_layout_mapping("Q", KEY_TYPE_Q, KEY_MOD_NONE, HOTKEY_BUILD_CLONE);
+    set_layout_mapping("Q", KEY_TYPE_Q, KEY_MOD_SHIFT, HOTKEY_BUILD_COPY_CURSOR);
+    set_layout_mapping("M", KEY_TYPE_M, KEY_MOD_NONE, HOTKEY_COPY_CURSOR_MIRROR);
     set_layout_mapping("X", KEY_TYPE_X, KEY_MOD_NONE, HOTKEY_MOTHBALL_TOGGLE);
     set_mapping(KEY_TYPE_1, KEY_MOD_NONE, HOTKEY_SHOW_ADVISOR_LABOR);
     set_mapping(KEY_TYPE_2, KEY_MOD_NONE, HOTKEY_SHOW_ADVISOR_MILITARY);
@@ -382,6 +387,14 @@ static void load_file(void)
         hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_ZOOM_IN, 0));
         hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_ZOOM_OUT, 0));
         hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_RESET_ZOOM, 0));
+    }
+    if (version < HOTKEY_CONFIG_COPY_CURSOR) {
+        if (!hotkey_for_action(HOTKEY_BUILD_COPY_CURSOR, 0)) {
+            hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_BUILD_COPY_CURSOR, 0));
+        }
+        if (!hotkey_for_action(HOTKEY_COPY_CURSOR_MIRROR, 0)) {
+            hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_COPY_CURSOR_MIRROR, 0));
+        }
     }
 }
 

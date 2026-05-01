@@ -35,6 +35,8 @@ typedef struct {
     int rotate_building_back;
     int building;
     int clone_building;
+    int copy_cursor;
+    int copy_cursor_mirror;
     int copy_building_settings;
     int paste_building_settings;
     int undo;

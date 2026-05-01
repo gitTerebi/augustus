@@ -1,6 +1,7 @@
 #include "city.h"
 
 #include "building/clone.h"
+#include "building/copy_cursor.h"
 #include "building/construction.h"
 #include "building/data_transfer.h"
 #include "building/menu.h"
@@ -773,11 +774,20 @@ static void handle_hotkeys(const hotkeys *h)
     if (h->save_file) {
         window_file_dialog_show(FILE_TYPE_SAVED_GAME, FILE_DIALOG_SAVE);
     }
-    if (h->rotate_building) {
+    if (h->rotate_building && building_copy_cursor_is_placing()) {
+        building_copy_cursor_rotate();
+    } else if (h->rotate_building) {
         building_rotation_rotate_forward();
     }
-    if (h->rotate_building_back) {
+    if (h->rotate_building_back && building_copy_cursor_is_placing()) {
+        building_copy_cursor_rotate();
+        building_copy_cursor_rotate();
+        building_copy_cursor_rotate();
+    } else if (h->rotate_building_back) {
         building_rotation_rotate_backward();
+    }
+    if (h->copy_cursor_mirror) {
+        building_copy_cursor_mirror();
     }
     if (h->building) {
         set_construction_building_type(h->building, 0);
@@ -809,7 +819,10 @@ static void handle_hotkeys(const hotkeys *h)
             }
         }
     }
-    if (h->clone_building) {
+    if (h->copy_cursor) {
+        building_copy_cursor_start(widget_city_current_grid_offset());
+    }
+    if (h->clone_building && !h->copy_cursor) {
         building_type type = building_clone_type_from_grid_offset(widget_city_current_grid_offset());
         int rotation = building_clone_rotation_from_grid_offset(widget_city_current_grid_offset());
         if (type) {
