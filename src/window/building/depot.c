@@ -152,6 +152,32 @@ static generic_button depot_order_buttons[] = {
 };
 dropdown_button tooltip_style_dropdown_button;
 
+static void draw_storage_name_and_stock(building_info_context *c, building *storage, int x, int y, int width,
+    font_t font, color_t color)
+{
+    if (c->depot_selection != 2 && c->depot_selection != 3) {
+        text_draw_label_and_number_centered(lang_get_string(28, storage->type), storage->storage_id, "",
+            x, y, width, font, color);
+        return;
+    }
+
+    int amount = building_storage_get_amount(storage, data.target_resource_id);
+    int name_width = text_get_width(lang_get_string(28, storage->type), font) +
+        text_get_number_width(storage->storage_id, ' ', "", font);
+    int stock_width = 4 + 24 + text_get_number_width(amount, 0, "", font);
+    int total_width = name_width + stock_width;
+    int text_x = x + (width - total_width) / 2;
+    if (text_x < x + 4) {
+        text_x = x + 4;
+    }
+
+    int drawn_width = text_draw_label_and_number(lang_get_string(28, storage->type), storage->storage_id, "",
+        text_x, y, font, color);
+    int icon_x = text_x + drawn_width + 4;
+    image_draw(resource_get_data(data.target_resource_id)->image.icon, icon_x, y - 5, COLOR_MASK_NONE, SCALE_NONE);
+    text_draw_number(amount, 0, "", icon_x + 24, y, font, color);
+}
+
 static void setup_buttons_for_selected_depot(void)
 {
     for (int i = 0; i < MAX_VISIBLE_ROWS; i++) {
@@ -695,8 +721,7 @@ void window_building_draw_depot_select_source_destination(building_info_context 
             // Middle button - select storage
             button_border_draw(c->x_offset + 18 + BLOCK_SIZE * 2, y_offset + 46 + ROW_HEIGHT * drawn_rows, base_width,
                 22, data.storage_building_focus_button_id == drawn_rows + 1);
-            text_draw_label_and_number_centered(
-                lang_get_string(28, bld->type), bld->storage_id, "", c->x_offset + 18 + BLOCK_SIZE * 2,
+            draw_storage_name_and_stock(c, bld, c->x_offset + 18 + BLOCK_SIZE * 2,
                 y_offset + 52 + ROW_HEIGHT * drawn_rows, base_width, FONT_NORMAL_WHITE, 0);
 
             // Right button - view storage
@@ -766,9 +791,8 @@ void window_building_draw_depot_select_source_destination(building_info_context 
             // Middle button - select storage (disabled for inactive storages)
             button_border_draw(c->x_offset + 18 + BLOCK_SIZE * 2, y_offset + 46 + ROW_HEIGHT * drawn_rows,
                 base_width, 22, 0);
-            text_draw_label_and_number_centered(lang_get_string(28, bld->type), bld->storage_id, "",
-                c->x_offset + 18 + BLOCK_SIZE * 2, y_offset + 52 + ROW_HEIGHT * drawn_rows, base_width,
-                FONT_NORMAL_BLACK, COLOR_FONT_LIGHT_GRAY);
+            draw_storage_name_and_stock(c, bld, c->x_offset + 18 + BLOCK_SIZE * 2,
+                y_offset + 52 + ROW_HEIGHT * drawn_rows, base_width, FONT_NORMAL_BLACK, COLOR_FONT_LIGHT_GRAY);
 
             // Right button - view storage - center camera on storage
             button_border_draw(c->x_offset + 18 + base_width + BLOCK_SIZE * 2, y_offset + 46 + ROW_HEIGHT * drawn_rows,
