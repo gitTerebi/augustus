@@ -14,6 +14,7 @@
 static struct {
     int delta;
     int restore;
+    int snap_to_step;
     pixel_offset input_offset;
     speed_type step;
     struct {
@@ -31,6 +32,16 @@ static void start_touch(const touch *first, const touch *last, int scale)
     data.input_offset.y = first->current_point.y;
     data.touch.start_zoom = scale;
     data.touch.current_zoom = scale;
+}
+
+static int get_zoom_step_target(int current_zoom, int zoom_delta)
+{
+    int remainder = current_zoom % ZOOM_DELTA;
+    if (zoom_delta > 0) {
+        return current_zoom + (remainder ? ZOOM_DELTA - remainder : ZOOM_DELTA);
+    } else {
+        return current_zoom - (remainder ? remainder : ZOOM_DELTA);
+    }
 }
 
 void zoom_update_touch(const touch *first, const touch *last, int scale)
@@ -69,6 +80,7 @@ void zoom_map(const mouse *m, const hotkeys *h, int current_zoom)
     }
     if (h->reset_zoom) {
         data.restore = 1;
+        data.snap_to_step = 0;
         speed_clear(&data.step);
         data.input_offset.x = m->x;
         data.input_offset.y = m->y - TOP_MENU_HEIGHT;
@@ -76,17 +88,14 @@ void zoom_map(const mouse *m, const hotkeys *h, int current_zoom)
     }
     if (h->zoom_in || h->zoom_out) {
         data.restore = 0;
-        int zoom_offset;
         int zoom_delta;
         if (h->zoom_out) {
-            zoom_offset = 0;
             zoom_delta = ZOOM_DELTA;
         } else {
-            zoom_offset = -1;
             zoom_delta = -ZOOM_DELTA;
         }
-        int multiplier = (current_zoom + zoom_offset) / 100 + 1;
-        data.delta = zoom_delta * multiplier;
+        data.delta = get_zoom_step_target(current_zoom, zoom_delta) - current_zoom;
+        data.snap_to_step = 1;
         if (config_get(CONFIG_UI_SMOOTH_SCROLLING)) {
             speed_clear(&data.step);
             speed_set_target(&data.step, ZOOM_STEP, SPEED_CHANGE_IMMEDIATE, 1);
@@ -102,6 +111,7 @@ int zoom_update_value(int *zoom, int max, pixel_offset *camera_position)
     if (!data.touch.active) {
         if (data.restore) {
             data.delta = 100 - *zoom;
+            data.snap_to_step = 0;
             if (config_get(CONFIG_UI_SMOOTH_SCROLLING)) {
                 speed_set_target(&data.step, ZOOM_STEP, SPEED_CHANGE_IMMEDIATE, 1);
             }
@@ -110,7 +120,9 @@ int zoom_update_value(int *zoom, int max, pixel_offset *camera_position)
         if (data.delta == 0) {
             return 0;
         }
-        if (config_get(CONFIG_UI_SMOOTH_SCROLLING)) {
+        if (data.snap_to_step) {
+            step = data.delta;
+        } else if (config_get(CONFIG_UI_SMOOTH_SCROLLING)) {
             step = speed_get_delta(&data.step);
             step *= (*zoom / 100) + 1;
             if (!step) {
@@ -124,10 +136,12 @@ int zoom_update_value(int *zoom, int max, pixel_offset *camera_position)
 
         if (data.delta == 0) {
             speed_clear(&data.step);
+            data.snap_to_step = 0;
         }
     } else {
         speed_clear(&data.step);
         data.restore = 0;
+        data.snap_to_step = 0;
         int current_zoom = data.touch.current_zoom;
         if (current_zoom > 90 && current_zoom < 110) {
             current_zoom = 100;
