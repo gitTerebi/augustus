@@ -320,6 +320,7 @@ set(BUILDING_FILES
     ${PROJECT_SOURCE_DIR}/src/building/building.c
     ${PROJECT_SOURCE_DIR}/src/building/caravanserai.c
     ${PROJECT_SOURCE_DIR}/src/building/clone.c
+    ${PROJECT_SOURCE_DIR}/src/building/copy_cursor.c
     ${PROJECT_SOURCE_DIR}/src/building/connectable.c
     ${PROJECT_SOURCE_DIR}/src/building/construction.c
     ${PROJECT_SOURCE_DIR}/src/building/construction_building.c
@@ -1117,6 +1118,14 @@ else()
 
     if(WIN32)
        target_link_libraries(${SHORT_NAME} dbghelp shlwapi)
+       set(AUGUSTUS_GAME_FOLDER "G:/games/Caesar 3" CACHE PATH "Folder to copy Augustus executable after build")
+       if(AUGUSTUS_GAME_FOLDER)
+           add_custom_command(TARGET ${SHORT_NAME} POST_BUILD
+               COMMAND ${CMAKE_COMMAND} -E make_directory "${AUGUSTUS_GAME_FOLDER}"
+               COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${SHORT_NAME}>" "${AUGUSTUS_GAME_FOLDER}/$<TARGET_FILE_NAME:${SHORT_NAME}>"
+               COMMENT "Copying $<TARGET_FILE_NAME:${SHORT_NAME}> to ${AUGUSTUS_GAME_FOLDER}"
+           )
+       endif()
     endif()
 
     if(UNIX AND NOT APPLE)

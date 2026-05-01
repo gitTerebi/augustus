@@ -82,6 +82,7 @@ static struct {
     int start_offset_y_view;
     int cycle_step;
     int auto_cycling;
+    int auto_temple_pool;
 } data;
 
 static int last_items_cleared;
@@ -235,6 +236,63 @@ int building_construction_is_auto_cycling(void)
 void building_construction_toggle_auto_cycle(void)
 {
     data.auto_cycling ^= 1;
+}
+
+static int auto_temple_allowed(building_type type)
+{
+    return scenario_allowed_building(type) && building_monument_has_required_resources_to_build(type);
+}
+
+static building_type auto_temple_type(int temple_pool)
+{
+    static const building_type small_temples[] = {
+        BUILDING_SMALL_TEMPLE_CERES, BUILDING_SMALL_TEMPLE_NEPTUNE, BUILDING_SMALL_TEMPLE_MERCURY,
+        BUILDING_SMALL_TEMPLE_MARS, BUILDING_SMALL_TEMPLE_VENUS
+    };
+    static const building_type large_temples[] = {
+        BUILDING_LARGE_TEMPLE_CERES, BUILDING_LARGE_TEMPLE_NEPTUNE, BUILDING_LARGE_TEMPLE_MERCURY,
+        BUILDING_LARGE_TEMPLE_MARS, BUILDING_LARGE_TEMPLE_VENUS
+    };
+    static const building_type grand_temples[] = {
+        BUILDING_GRAND_TEMPLE_CERES, BUILDING_GRAND_TEMPLE_NEPTUNE, BUILDING_GRAND_TEMPLE_MERCURY,
+        BUILDING_GRAND_TEMPLE_MARS, BUILDING_GRAND_TEMPLE_VENUS
+    };
+    const building_type *temples = small_temples;
+    if (temple_pool == 1) {
+        temples = large_temples;
+    } else if (temple_pool == 2) {
+        temples = grand_temples;
+    }
+    int min_count = 0x7fffffff;
+
+    for (int i = 0; i < 5; i++) {
+        if (!auto_temple_allowed(temples[i])) {
+            continue;
+        }
+        int count = building_count_total(temples[i]);
+        if (count < min_count) {
+            min_count = count;
+        }
+    }
+    for (int i = 0; i < 5; i++) {
+        if (auto_temple_allowed(temples[i]) && building_count_total(temples[i]) == min_count) {
+            return temples[i];
+        }
+    }
+    return BUILDING_NONE;
+}
+
+static void set_type(building_type type, int setup_rotation, int keep_auto_temple);
+
+void building_construction_set_auto_temple(int temple_pool)
+{
+    building_type type = auto_temple_type(temple_pool);
+    if (type == BUILDING_NONE) {
+        return;
+    }
+    data.auto_temple_pool = temple_pool + 1;
+    data.auto_cycling = 0;
+    set_type(type, 0, 1);
 }
 
 static void mark_construction(int x, int y, int size, int terrain, int absolute_xy)
@@ -570,8 +628,11 @@ int building_construction_can_rotate(void)
     return building_rotation_type_has_rotations(data.type);
 }
 
-void building_construction_set_type(building_type type, int setup_rotation)
+static void set_type(building_type type, int setup_rotation, int keep_auto_temple)
 {
+    if (!keep_auto_temple) {
+        data.auto_temple_pool = 0;
+    }
     if (type != data.type) {
         building_rotation_remove_rotation();
     }
@@ -628,11 +689,17 @@ void building_construction_set_type(building_type type, int setup_rotation)
     }
 }
 
+void building_construction_set_type(building_type type, int setup_rotation)
+{
+    set_type(type, setup_rotation, 0);
+}
+
 void building_construction_clear_type(void)
 {
     data.cost_preview = 0;
     data.type = BUILDING_NONE;
     data.in_progress = 0;
+    data.auto_temple_pool = 0;
     building_rotation_remove_rotation();
 }
 
@@ -1219,6 +1286,11 @@ void building_construction_place(void)
     if (data.auto_cycling && building_construction_type_can_cycle(data.type)) {
         for (int i = 0; i < building_construction_type_cycle_steps(data.type); i++) {
             building_rotation_rotate_forward();
+        }
+    } else if (data.auto_temple_pool) {
+        building_type next_type = auto_temple_type(data.auto_temple_pool - 1);
+        if (next_type != BUILDING_NONE) {
+            set_type(next_type, 0, 1);
         }
     }
     formation_move_herds_away(x_end, y_end);

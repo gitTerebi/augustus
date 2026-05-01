@@ -2078,6 +2078,7 @@ static translation_string all_strings[] = {
     {TR_EDITOR_PRICE_CHANGES, "price changes"},
     {TR_EDITOR_DEMAND_CHANGE, "demand change"},
     {TR_EDITOR_DEMAND_CHANGES, "demand changes"},
+    {TR_AUTO_TEMPLE, "Auto Temple"},
 };
 
 void translation_english(const translation_string **strings, int *num_strings)

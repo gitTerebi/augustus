@@ -187,6 +187,12 @@ static int is_auto_cycle_button(building_type type)
         (type == BUILDING_MENU_GARDENS && data.selected_submenu == BUILD_MENU_GARDENS);
 }
 
+static int is_auto_temple_button(building_type type)
+{
+    return (type == BUILDING_MENU_SMALL_TEMPLES && data.selected_submenu == BUILD_MENU_SMALL_TEMPLES) ||
+        (type == BUILDING_MENU_LARGE_TEMPLES && data.selected_submenu == BUILD_MENU_LARGE_TEMPLES);
+}
+
 static int produced_resource_icon(building_type type)
 {
     resource_type r = resource_get_from_industry(type);
@@ -243,18 +249,22 @@ static void draw_menu_buttons(void)
         }
 
         if (is_auto_cycle_button(type)) {
+            const uint8_t *auto_text = is_auto_temple_button(type) ?
+                translation_for(TR_AUTO_TEMPLE) : translation_for(TR_AUTO_CYCLE_TEMPLES);
             if (menu_index > 0) {
-                text_draw_build_menu_with_index(translation_for(TR_AUTO_CYCLE_TEMPLES), menu_index % 10,
+                text_draw_build_menu_with_index(auto_text, menu_index % 10,
                 item_x_align + MENU_TEXT_X_OFFSET, data.y_offset + MENU_Y_OFFSET + 4 + MENU_ITEM_HEIGHT * i,
                 MENU_ITEM_WIDTH, FONT_NORMAL_GREEN, 0);
             } else {
-                text_draw_centered(translation_for(TR_AUTO_CYCLE_TEMPLES),
+                text_draw_centered(auto_text,
                 item_x_align + MENU_TEXT_X_OFFSET, data.y_offset + MENU_Y_OFFSET + 4 + MENU_ITEM_HEIGHT * i,
                 MENU_ITEM_WIDTH, FONT_NORMAL_GREEN, 0);
             }
-            lang_text_draw_centered(18, 5 - building_construction_is_auto_cycling(), x_offset - MENU_ITEM_MONEY_OFFSET,
-                data.y_offset + MENU_Y_OFFSET + 4 + MENU_ITEM_HEIGHT * i, MENU_ITEM_MONEY_OFFSET,
-                FONT_NORMAL_GREEN);
+            if (!is_auto_temple_button(type)) {
+                lang_text_draw_centered(18, 5 - building_construction_is_auto_cycling(), x_offset - MENU_ITEM_MONEY_OFFSET,
+                    data.y_offset + MENU_Y_OFFSET + 4 + MENU_ITEM_HEIGHT * i, MENU_ITEM_MONEY_OFFSET,
+                    FONT_NORMAL_GREEN);
+            }
             continue;
         }
 
@@ -390,6 +400,12 @@ static void button_menu_item(int item)
     building_type type = building_menu_type(data.selected_submenu, item);
 
     if (is_auto_cycle_button(type)) {
+        if (is_auto_temple_button(type)) {
+            building_construction_set_auto_temple(data.selected_submenu == BUILD_MENU_LARGE_TEMPLES);
+            data.selected_submenu = SUBMENU_NONE;
+            window_city_show();
+            return;
+        }
         building_construction_toggle_auto_cycle();
         window_invalidate();
         return;
