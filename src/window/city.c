@@ -695,6 +695,27 @@ static void cycle_legion(void)
     }
 }
 
+static void handle_input_all_legions(const mouse *m, const hotkeys *h);
+static void get_tooltip(tooltip_context *c);
+
+static void window_city_all_legions_show(void)
+{
+    if (formation_get_selected()) {
+        formation_set_selected(0);
+        if (config_get(CONFIG_UI_SHOW_MILITARY_SIDEBAR)) {
+            widget_sidebar_military_exit();
+        }
+    }
+    window_type window = {
+        WINDOW_CITY_MILITARY,
+        draw_background,
+        draw_foreground,
+        handle_input_all_legions,
+        get_tooltip
+    };
+    window_show(&window);
+}
+
 static void toggle_pause(void)
 {
     game_state_toggle_paused();
@@ -741,6 +762,9 @@ static void handle_hotkeys(const hotkeys *h)
     }
     if (h->cycle_legion) {
         cycle_legion();
+    }
+    if (h->command_all_legions) {
+        window_city_all_legions_show();
     }
     if (h->rotate_map_left) {
         if (!building_construction_in_progress()) {
@@ -878,6 +902,18 @@ static void handle_input_military(const mouse *m, const hotkeys *h)
         return;
     }
     widget_city_handle_input_military(m, h, formation_get_selected());
+}
+
+static void handle_input_all_legions(const mouse *m, const hotkeys *h)
+{
+    handle_hotkeys(h);
+    if (widget_top_menu_handle_input(m, h)) {
+        return;
+    }
+    if (widget_sidebar_city_handle_mouse(m)) {
+        return;
+    }
+    widget_city_handle_input_all_legions(m, h);
 }
 
 static void get_tooltip(tooltip_context *c)

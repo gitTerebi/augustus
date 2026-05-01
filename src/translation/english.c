@@ -146,6 +146,7 @@ static translation_string all_strings[] = {
     {TR_HOTKEY_DECREASE_GAME_SPEED, "Decrease game speed"},
     {TR_HOTKEY_TOGGLE_PAUSE, "Toggle pause"},
     {TR_HOTKEY_CYCLE_LEGION, "Cycle through legions"},
+    {TR_HOTKEY_COMMAND_ALL_LEGIONS, "Command all legions"},
     {TR_HOTKEY_ROTATE_MAP_LEFT, "Rotate map left"},
     {TR_HOTKEY_ROTATE_MAP_RIGHT, "Rotate map right"},
     {TR_HOTKEY_ZOOM_IN, "Zoom in"},

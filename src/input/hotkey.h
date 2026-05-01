@@ -13,6 +13,7 @@ typedef struct {
     int backspace_pressed;
     // keys with specific function
     int cycle_legion;
+    int command_all_legions;
     int decrease_game_speed;
     int increase_game_speed;
     int rotate_map_left;

@@ -13,6 +13,7 @@
 #include "core/image_group.h"
 #include "core/lang.h"
 #include "core/string.h"
+#include "figure/formation.h"
 #include "figure/formation_legion.h"
 #include "figure/roamer_preview.h"
 #include "game/cheats.h"
@@ -31,6 +32,7 @@
 #include "input/touch.h"
 #include "map/building.h"
 #include "map/grid.h"
+#include "map/routing.h"
 #include "scenario/property.h"
 #include "sound/city.h"
 #include "sound/speech.h"
@@ -49,10 +51,16 @@
 static struct {
     map_tile current_tile;
     map_tile selected_tile;
+    map_tile legion_command_tile;
     int selected_building_id;
     int new_start_grid_offset;
     int capture_input;
     int routing_grid_offset;
+    int legion_command_dragging;
+    int legion_command_start_x;
+    int legion_command_start_y;
+    int legion_command_current_x;
+    int legion_command_current_y;
 } data;
 
 void set_city_clip_rectangle(void)
@@ -94,6 +102,28 @@ void widget_city_draw(void)
     update_zoom_level();
     set_city_clip_rectangle();
     city_draw(0, 0, &data.current_tile, data.selected_building_id);
+    if (data.legion_command_dragging) {
+        int x1 = data.legion_command_start_x;
+        int y1 = data.legion_command_start_y;
+        int x2 = data.legion_command_current_x;
+        int y2 = data.legion_command_current_y;
+        graphics_draw_line(x1 + 1, x2 + 1, y1 + 1, y2 + 1, COLOR_BLACK);
+        graphics_draw_line(x1, x2, y1, y2, COLOR_FONT_YELLOW);
+        int dx = x2 - x1;
+        int dy = y2 - y1;
+        if (dx || dy) {
+            int head_x = dx > 0 ? -8 : dx < 0 ? 8 : 0;
+            int head_y = dy > 0 ? -8 : dy < 0 ? 8 : 0;
+            int side_x = dy > 0 ? -4 : dy < 0 ? 4 : 0;
+            int side_y = dx > 0 ? 4 : dx < 0 ? -4 : 0;
+            graphics_draw_line(x2 + 1, x2 + head_x + side_x + 1,
+                y2 + 1, y2 + head_y + side_y + 1, COLOR_BLACK);
+            graphics_draw_line(x2 + 1, x2 + head_x - side_x + 1,
+                y2 + 1, y2 + head_y - side_y + 1, COLOR_BLACK);
+            graphics_draw_line(x2, x2 + head_x + side_x, y2, y2 + head_y + side_y, COLOR_FONT_YELLOW);
+            graphics_draw_line(x2, x2 + head_x - side_x, y2, y2 + head_y - side_y, COLOR_FONT_YELLOW);
+        }
+    }
     graphics_reset_clip_rectangle();
 }
 
@@ -714,7 +744,184 @@ static void military_map_click(int legion_formation_id, const map_tile *tile)
     window_city_show();
 }
 
-void widget_city_handle_input_military(const mouse *m, const hotkeys *h, int legion_formation_id)
+static int tile_was_used(int grid_offset, const int *used_offsets, int used_count)
+{
+    for (int i = 0; i < used_count; i++) {
+        if (used_offsets[i] == grid_offset) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int formation_layout_for_direction(const formation *m, int direction)
+{
+    if (m->layout == FORMATION_COLUMN || m->layout == FORMATION_TORTOISE || m->layout == FORMATION_MOP_UP) {
+        return m->layout;
+    }
+    if (direction == DIR_6_LEFT || direction == DIR_2_RIGHT) {
+        return m->layout == FORMATION_SINGLE_LINE_1 || m->layout == FORMATION_SINGLE_LINE_2 ?
+            FORMATION_SINGLE_LINE_2 : FORMATION_DOUBLE_LINE_2;
+    }
+    return m->layout == FORMATION_SINGLE_LINE_1 || m->layout == FORMATION_SINGLE_LINE_2 ?
+        FORMATION_SINGLE_LINE_1 : FORMATION_DOUBLE_LINE_1;
+}
+
+static int command_cardinal_direction(int direction)
+{
+    switch (direction) {
+        case DIR_1_TOP_RIGHT:
+            return DIR_0_TOP;
+        case DIR_3_BOTTOM_RIGHT:
+            return DIR_2_RIGHT;
+        case DIR_5_BOTTOM_LEFT:
+            return DIR_4_BOTTOM;
+        case DIR_7_TOP_LEFT:
+            return DIR_6_LEFT;
+        default:
+            return direction;
+    }
+}
+
+static int legion_command_role(const formation *m)
+{
+    switch (m->figure_type) {
+        case FIGURE_FORT_MOUNTED:
+            return 0;
+        case FIGURE_FORT_LEGIONARY:
+        case FIGURE_FORT_INFANTRY:
+            return 1;
+        case FIGURE_FORT_ARCHER:
+        case FIGURE_FORT_JAVELIN:
+            return 2;
+        default:
+            return 1;
+    }
+}
+
+static map_point command_offset_for_role(int direction, int role, int index)
+{
+    static const int side_offsets[] = {0, -4, 4, -8, 8, -12, 12};
+    int side = side_offsets[index % (sizeof(side_offsets) / sizeof(side_offsets[0]))];
+    map_point offset = {0, 0};
+    int row = (role - 1) * 2;
+    switch (direction) {
+        case DIR_0_TOP:
+            offset.x = side;
+            offset.y = row;
+            break;
+        case DIR_4_BOTTOM:
+            offset.x = side;
+            offset.y = -row;
+            break;
+        case DIR_2_RIGHT:
+            offset.x = -row;
+            offset.y = side;
+            break;
+        case DIR_6_LEFT:
+            offset.x = row;
+            offset.y = side;
+            break;
+        default:
+            offset.x = side;
+            offset.y = 0;
+            break;
+    }
+    return offset;
+}
+
+static int get_legion_command_target(const formation *m, const map_tile *center, int direction,
+    int role, int preferred_offset, const int *used_offsets, int used_count, map_tile *target)
+{
+    static const map_point square_offsets[] = {
+        {0, 0}, {1, 0}, {0, 1}, {1, 1}, {-1, 0}, {0, -1}, {-1, -1}, {1, -1}, {-1, 1}
+    };
+    const int num_square_offsets = sizeof(square_offsets) / sizeof(square_offsets[0]);
+    map_routing_calculate_distances(m->x_home, m->y_home);
+    for (int attempt = 0; attempt < num_square_offsets; attempt++) {
+        const map_point offset = direction >= DIR_0_TOP && direction < DIR_8_NONE ?
+            command_offset_for_role(direction, role, preferred_offset + attempt) :
+            square_offsets[(preferred_offset + attempt) % num_square_offsets];
+        int x = center->x + offset.x;
+        int y = center->y + offset.y;
+        if (!map_grid_is_inside(x, y, 1)) {
+            continue;
+        }
+        int grid_offset = map_grid_offset(x, y);
+        if (tile_was_used(grid_offset, used_offsets, used_count) || map_routing_distance(grid_offset) <= 0) {
+            continue;
+        }
+        target->x = x;
+        target->y = y;
+        target->grid_offset = grid_offset;
+        return 1;
+    }
+    if (direction >= DIR_0_TOP && direction < DIR_8_NONE) {
+        for (int attempt = 0; attempt < num_square_offsets; attempt++) {
+            const map_point offset = square_offsets[(preferred_offset + attempt) % num_square_offsets];
+            int x = center->x + offset.x;
+            int y = center->y + offset.y;
+            if (!map_grid_is_inside(x, y, 1)) {
+                continue;
+            }
+            int grid_offset = map_grid_offset(x, y);
+            if (tile_was_used(grid_offset, used_offsets, used_count) || map_routing_distance(grid_offset) <= 0) {
+                continue;
+            }
+            target->x = x;
+            target->y = y;
+            target->grid_offset = grid_offset;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void military_map_click_all_legions(const map_tile *tile, int direction)
+{
+    if (!tile->grid_offset) {
+        return;
+    }
+    int used_offsets[MAX_LEGIONS] = { 0 };
+    int cardinal_direction = command_cardinal_direction(direction);
+    int used_count = 0;
+    int ordered = 0;
+    int ordered_in_role[3] = {0};
+    for (int role = 0; role < 3; role++) {
+        for (int i = 1; i < formation_count(); i++) {
+            formation *m = formation_get(i);
+            if (!m || !m->in_use || !m->is_legion || m->is_herd || m->in_distant_battle ||
+                m->cursed_by_mars || m->num_figures <= 0 || legion_command_role(m) != role) {
+                continue;
+            }
+            map_tile target;
+            if (!get_legion_command_target(m, tile, cardinal_direction, role,
+                ordered_in_role[role], used_offsets, used_count, &target)) {
+                continue;
+            }
+            if (cardinal_direction >= DIR_0_TOP && cardinal_direction < DIR_8_NONE) {
+                m->layout = formation_layout_for_direction(m, cardinal_direction);
+            }
+            formation_legion_move_to(m, &target);
+            if (cardinal_direction >= DIR_0_TOP && cardinal_direction < DIR_8_NONE) {
+                m->direction = cardinal_direction;
+            }
+            used_offsets[used_count++] = target.grid_offset;
+            ordered_in_role[role]++;
+            ordered++;
+        }
+    }
+    if (ordered > 0) {
+        if (config_get(CONFIG_UI_MOVE_LEGION_SOUND_SWAP)) {
+            sound_speech_play_file("wavs/marching.wav");
+        } else {
+            sound_speech_play_file("wavs/cohort5.wav");
+        }
+    }
+    window_city_show();
+}
+
+static void handle_military_input(const mouse *m, const hotkeys *h, int legion_formation_id, int all_legions)
 {
     map_tile *tile = &data.current_tile;
     update_city_view_coords(m->x, m->y, tile);
@@ -745,9 +952,37 @@ void widget_city_handle_input_military(const mouse *m, const hotkeys *h, int leg
         zoom_map(m, h, city_view_get_scale());
     }
 
-    if ((!m->is_touch && m->left.went_down)
+    if (all_legions && !m->is_touch && m->left.went_down) {
+        data.legion_command_tile = *tile;
+        data.legion_command_dragging = 1;
+        data.capture_input = 1;
+        data.legion_command_start_x = m->x;
+        data.legion_command_start_y = m->y;
+        data.legion_command_current_x = m->x;
+        data.legion_command_current_y = m->y;
+        return;
+    }
+    if (all_legions && data.legion_command_dragging) {
+        data.legion_command_current_x = m->x;
+        data.legion_command_current_y = m->y;
+    }
+
+    if (all_legions && !m->is_touch && m->left.went_up && data.legion_command_dragging) {
+        int direction = DIR_8_NONE;
+        if (data.legion_command_tile.grid_offset && tile->grid_offset &&
+            data.legion_command_tile.grid_offset != tile->grid_offset) {
+            direction = calc_general_direction(data.legion_command_tile.x, data.legion_command_tile.y, tile->x, tile->y);
+        }
+        military_map_click_all_legions(&data.legion_command_tile, direction);
+        data.legion_command_dragging = 0;
+        data.capture_input = 0;
+    } else if ((!m->is_touch && m->left.went_down)
         || (m->is_touch && m->left.went_up && touch_was_click(touch_get_earliest()))) {
-        military_map_click(legion_formation_id, tile);
+        if (all_legions) {
+            military_map_click_all_legions(tile, DIR_8_NONE);
+        } else {
+            military_map_click(legion_formation_id, tile);
+        }
     }
 
     if (m->right.went_down && input_coords_in_city(m->x, m->y)) {
@@ -755,9 +990,20 @@ void widget_city_handle_input_military(const mouse *m, const hotkeys *h, int leg
     }
     if ((m->right.went_up && !scroll_drag_end()) || h->escape_pressed) {
         data.capture_input = 0;
+        data.legion_command_dragging = 0;
         city_warning_clear_all();
         window_city_show();
     }
+}
+
+void widget_city_handle_input_military(const mouse *m, const hotkeys *h, int legion_formation_id)
+{
+    handle_military_input(m, h, legion_formation_id, 0);
+}
+
+void widget_city_handle_input_all_legions(const mouse *m, const hotkeys *h)
+{
+    handle_military_input(m, h, 0, 1);
 }
 
 int widget_city_current_grid_offset(void)

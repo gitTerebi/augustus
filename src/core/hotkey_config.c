@@ -15,7 +15,8 @@
 #define HOTKEY_CONFIG_UNVERSIONED 0
 #define HOTKEY_CONFIG_ZOOM 1
 #define HOTKEY_CONFIG_COPY_CURSOR 2
-#define HOTKEY_CURRENT_VERSION HOTKEY_CONFIG_COPY_CURSOR
+#define HOTKEY_CONFIG_COMMAND_ALL_LEGIONS 3
+#define HOTKEY_CURRENT_VERSION HOTKEY_CONFIG_COMMAND_ALL_LEGIONS
 
 static const char *INI_FILENAME = "augustus-hotkeys.ini";
 
@@ -29,6 +30,7 @@ static const char *ini_keys[] = {
     "toggle_pause",
     "toggle_overlay",
     "cycle_legion",
+    "command_all_legions",
     "increase_game_speed",
     "decrease_game_speed",
     "rotate_map_left",
@@ -192,6 +194,7 @@ static void init_defaults(void)
     set_layout_mapping("P", KEY_TYPE_P, KEY_MOD_NONE, HOTKEY_TOGGLE_PAUSE);
     set_mapping(KEY_TYPE_SPACE, KEY_MOD_NONE, HOTKEY_TOGGLE_OVERLAY);
     set_layout_mapping("L", KEY_TYPE_L, KEY_MOD_NONE, HOTKEY_CYCLE_LEGION);
+    set_layout_mapping("L", KEY_TYPE_L, KEY_MOD_SHIFT, HOTKEY_COMMAND_ALL_LEGIONS);
     set_layout_mapping("[", KEY_TYPE_LEFTBRACKET, KEY_MOD_NONE, HOTKEY_DECREASE_GAME_SPEED);
     set_layout_mapping("]", KEY_TYPE_RIGHTBRACKET, KEY_MOD_NONE, HOTKEY_INCREASE_GAME_SPEED);
     set_mapping(KEY_TYPE_PAGEDOWN, KEY_MOD_NONE, HOTKEY_DECREASE_GAME_SPEED);
@@ -395,6 +398,9 @@ static void load_file(void)
         if (!hotkey_for_action(HOTKEY_COPY_CURSOR_MIRROR, 0)) {
             hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_COPY_CURSOR_MIRROR, 0));
         }
+    }
+    if (version < HOTKEY_CONFIG_COMMAND_ALL_LEGIONS && !hotkey_for_action(HOTKEY_COMMAND_ALL_LEGIONS, 0)) {
+        hotkey_config_add_mapping(hotkey_default_for_action(HOTKEY_COMMAND_ALL_LEGIONS, 0));
     }
 }
 

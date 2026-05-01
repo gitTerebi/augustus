@@ -69,6 +69,9 @@ static void set_definition_for_action(hotkey_action action, hotkey_definition *d
         case HOTKEY_CYCLE_LEGION:
             def->action = &data.hotkey_state.cycle_legion;
             break;
+        case HOTKEY_COMMAND_ALL_LEGIONS:
+            def->action = &data.hotkey_state.command_all_legions;
+            break;
         case HOTKEY_INCREASE_GAME_SPEED:
             def->action = &data.hotkey_state.increase_game_speed;
             def->repeatable = 1;

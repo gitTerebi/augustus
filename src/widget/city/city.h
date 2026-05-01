@@ -20,6 +20,7 @@ void widget_city_draw_construction_buttons(void);
 int widget_city_has_input(void);
 void widget_city_handle_input(const mouse *m, const hotkeys *h);
 void widget_city_handle_input_military(const mouse *m, const hotkeys *h, int legion_formation_id);
+void widget_city_handle_input_all_legions(const mouse *m, const hotkeys *h);
 
 void widget_city_get_tooltip(tooltip_context *c);
 
