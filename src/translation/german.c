@@ -121,7 +121,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_FIX_100_YEAR_GHOSTS, "Behebe '100 Jahre alte Geister'"},
     {TR_CONFIG_FIX_EDITOR_EVENTS, "Behebe Wechsel- und Überlebenszeit des Imperators in eigenen Missionen"},
     {TR_CONFIG_FIX_IMMIGRATION_BUG, "Behebe Immigrationsfehler auf 'Sehr schwierig'"},
-    {TR_CONFIG_FIXED_WORKERS, "Fester Arbeiterpool - 38 % der Bevölkerung"},
+    {TR_CONFIG_FIXED_WORKERS, "Fester Arbeiterpool - 43 % der Bevölkerung"},
     {TR_CONFIG_FULLSCREEN, "Vollbild"},
     {TR_CONFIG_GAME_SPEED, "Spielgeschwindigkeit:"},
     {TR_CONFIG_GATES_DEFAULT_TO_PASS_ALL_WALKERS, "Nicht-militärische Tore lassen standardmäßig alle Fußgänger zu"},

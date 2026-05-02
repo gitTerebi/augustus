@@ -87,7 +87,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "전역적인 인력 활용 활성화"},
     {TR_CONFIG_SCHOOL_WALKERS, "학교 강사 범위 확장"},
     {TR_CONFIG_RETIRE_AT_60, "시민의 은퇴연령을 50세에서 60로 연장"},
-    {TR_CONFIG_FIXED_WORKERS, "도시의 노동자 인구를 평민 인구의 38%로 고정"},
+    {TR_CONFIG_FIXED_WORKERS, "도시의 노동자 인구를 평민 인구의 43%로 고정"},
     {TR_CONFIG_EXTRA_FORTS, "요새 4채 추가 건설 허용"},
     {TR_CONFIG_WOLVES_BLOCK, "늑대 근처에 건물 건설 불가"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "연결되지 않은 곡물창고의 도로 차단"},

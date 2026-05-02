@@ -77,7 +77,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "Slå på global arbetsstyrka"},
     {TR_CONFIG_SCHOOL_WALKERS, "Förläng skolvandrares räckvidd"},
     {TR_CONFIG_RETIRE_AT_60, "Ändra medborgares pensionsålder från 50 till 60"},
-    {TR_CONFIG_FIXED_WORKERS, "Fixerad arbetsstyrka - 38% av plebejbefolkningen"},
+    {TR_CONFIG_FIXED_WORKERS, "Fixerad arbetsstyrka - 43% av plebejbefolkningen"},
     {TR_CONFIG_EXTRA_FORTS, "Tillåt byggandet av 4 extra fort"},
     {TR_CONFIG_WOLVES_BLOCK, "Förbjudet att bygga i närheten av vargar"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "Blockera ej sammankopplade sädesmagasinvägar"},

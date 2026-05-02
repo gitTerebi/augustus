@@ -76,7 +76,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "Ativar força de trabalho universal"},
     {TR_CONFIG_SCHOOL_WALKERS, "Estender alcance dos estudantes das escolas"},
     {TR_CONFIG_RETIRE_AT_60, "Aumentar a idade de aposentadoria de 50 para 60 anos"},
-    {TR_CONFIG_FIXED_WORKERS, "Força de trabalho fixa - 38% da população plebeia"},
+    {TR_CONFIG_FIXED_WORKERS, "Força de trabalho fixa - 43% da população plebeia"},
     {TR_CONFIG_EXTRA_FORTS, "Permitir construir 4 fortes adicionais"},
     {TR_CONFIG_WOLVES_BLOCK, "Impedir construção em volta de lobos"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "Bloquear estradas de celeiro não conectadas"},

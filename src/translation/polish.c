@@ -143,7 +143,7 @@ static translation_string all_strings[] = {
     { TR_CONFIG_GLOBAL_LABOUR, "Włącz globalne zatrudnienie" },
     { TR_CONFIG_SCHOOL_WALKERS, "Wydłuż drogę uczniów szkół" },
     { TR_CONFIG_RETIRE_AT_60, "Zmień wiek emerytalny z 50 na 60" },
-    { TR_CONFIG_FIXED_WORKERS, "Stały procent zatrudnionych - 38%" },
+    { TR_CONFIG_FIXED_WORKERS, "Stały procent zatrudnionych - 43%" },
     { TR_CONFIG_EXTRA_FORTS, "Zezwól na budowę dodatkowych 4 fortów" },
     { TR_CONFIG_WOLVES_BLOCK, "Zablokuj budowę w pobliżu wilków" },
     { TR_CONFIG_DYNAMIC_GRANARIES, "Zablokuj niepołączenie drogi spichlerzy" },

@@ -87,7 +87,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "Abilita mercato del lavoro globale"},
     {TR_CONFIG_SCHOOL_WALKERS, "Aumenta la distanza massima percorribile dagli scolari"},
     {TR_CONFIG_RETIRE_AT_60, "Cambia l'età della pensione da 50 a 60 anni"},
-    {TR_CONFIG_FIXED_WORKERS, "Mercato del lavoro fisso - 38% della popolazione plebea"},
+    {TR_CONFIG_FIXED_WORKERS, "Mercato del lavoro fisso - 43% della popolazione plebea"},
     {TR_CONFIG_EXTRA_FORTS, "Consenti l'edificazione di 4 forti supplementari"},
     {TR_CONFIG_WOLVES_BLOCK, "Impedisci la costruzione vicino ai lupi"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "Bloccare le strade del granaio non collegate"},

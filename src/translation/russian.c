@@ -88,7 +88,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "Глобальный пул работников"},
     {TR_CONFIG_SCHOOL_WALKERS, "Увеличить зону покрытия школ"},
     {TR_CONFIG_RETIRE_AT_60, "Изменить возраст выхода на пенсию с 50 до 60 лет"},
-    {TR_CONFIG_FIXED_WORKERS, "Фиксированный размер пула работников в 38% от населения"},
+    {TR_CONFIG_FIXED_WORKERS, "Фиксированный размер пула работников в 43% от населения"},
     {TR_CONFIG_EXTRA_FORTS, "Разрешить строительство 4-х дополнительных фортов"},
     {TR_CONFIG_WOLVES_BLOCK, "Запретить строительство около волков"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "Блокировать тупиковые выходы из амбара"},

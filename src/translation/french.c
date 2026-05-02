@@ -88,7 +88,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "Activer la main-d'œuvre globale"},
     {TR_CONFIG_SCHOOL_WALKERS, "Augmente la couverture des écoliers"},
     {TR_CONFIG_RETIRE_AT_60, "Changer l'âge de retraite des citoyens de 50 à 60 ans"},
-    {TR_CONFIG_FIXED_WORKERS, "Main-d'œuvre fixe - 38 % de la population plébéienne"},
+    {TR_CONFIG_FIXED_WORKERS, "Main-d'œuvre fixe - 43 % de la population plébéienne"},
     {TR_CONFIG_EXTRA_FORTS, "Autoriser la construction de 4 forts supplémentaires"},
     {TR_CONFIG_WOLVES_BLOCK, "Bloquer la construction autour des loups"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "Bloquer les routes non connectées des greniers"},

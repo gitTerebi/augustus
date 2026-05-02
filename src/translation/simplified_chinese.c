@@ -80,7 +80,7 @@ static translation_string all_strings[] = {
     {TR_CONFIG_GLOBAL_LABOUR, "开启全图招工"},
     {TR_CONFIG_SCHOOL_WALKERS, "扩大学校行人路径范围"},
     {TR_CONFIG_RETIRE_AT_60, "市民退休年龄从50延长至60岁"},
-    {TR_CONFIG_FIXED_WORKERS, "固定38%的劳工人口"},
+    {TR_CONFIG_FIXED_WORKERS, "固定43%的劳工人口"},
     {TR_CONFIG_EXTRA_FORTS, "允许建造4个额外要塞"},
     {TR_CONFIG_WOLVES_BLOCK, "禁止在狼群周边建造"},
     {TR_CONFIG_DYNAMIC_GRANARIES, "禁止未连接主干的谷仓道路"},
