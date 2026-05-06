@@ -18,13 +18,6 @@
 
 #define PROCEED_GROUP 43
 #define PROCEED_TEXT 5
-#define PANEL_X 80
-#define PANEL_Y 80
-#define PANEL_WIDTH 480
-#define BODY_X 110
-#define BODY_Y 140
-#define BODY_WIDTH 420
-#define DEFAULT_BUTTON_Y_OFFSET 90
 #define CHECKBOX_CHECK_SIZE 20
 
 static void button_checkbox(const generic_button *button);
@@ -46,9 +39,6 @@ static struct {
     int translation_key;
     int checked;
     unsigned int has_focus;
-    int panel_height;
-    int button_y_offset;
-    int checkbox_y;
     int checkbox_start_width;
     const uint8_t *custom_title;
     const uint8_t *custom_text;
@@ -72,24 +62,9 @@ static int init(const uint8_t *custom_title, const uint8_t *custom_text,
     if (!data.custom_text) {
         data.custom_text = lang_get_string(PROCEED_GROUP, PROCEED_TEXT);
     }
-    int line_height = font_definition_for(FONT_NORMAL_BLACK)->line_height;
-    if (line_height < 11) {
-        line_height = 11;
-    }
-    int body_height = text_measure_multiline(data.custom_text, BODY_WIDTH, FONT_NORMAL_BLACK, 0) * (line_height + 5);
-    int content_bottom = BODY_Y + body_height + 12;
-    data.button_y_offset = content_bottom - buttons[0].y_offset;
-    if (data.button_y_offset < DEFAULT_BUTTON_Y_OFFSET) {
-        data.button_y_offset = DEFAULT_BUTTON_Y_OFFSET;
-    }
-    data.checkbox_y = content_bottom;
     if (data.checkbox_text) {
-        data.button_y_offset += 30;
         data.checkbox_start_width = 80 + (480 - text_get_width(data.checkbox_text, FONT_NORMAL_BLACK) - 30) / 2;
-        checkbox.y = data.checkbox_y;
     }
-    int panel_bottom = data.button_y_offset + buttons[0].y_offset + buttons[0].height + 14;
-    data.panel_height = (panel_bottom - PANEL_Y + BLOCK_SIZE - 1) / BLOCK_SIZE;
     return 1;
 }
 
@@ -97,20 +72,20 @@ static void draw_background(void)
 {
     window_draw_underlying_window();
     graphics_in_dialog();
-    outer_panel_draw(PANEL_X, PANEL_Y, 30, data.panel_height);
+    outer_panel_draw(80, 80, 30, data.checkbox_text ? 11 : 10);
     if (data.custom_title) {
-        text_draw_centered(data.custom_title, PANEL_X, 100, PANEL_WIDTH, FONT_LARGE_BLACK, 0);
+        text_draw_centered(data.custom_title, 80, 100, 480, FONT_LARGE_BLACK, 0);
     }
-    if (text_get_width(data.custom_text, FONT_NORMAL_BLACK) >= BODY_WIDTH) {
-        text_draw_multiline(data.custom_text, BODY_X, BODY_Y, BODY_WIDTH, 0, FONT_NORMAL_BLACK, 0);
+    if (text_get_width(data.custom_text, FONT_NORMAL_BLACK) >= 420) {
+        text_draw_multiline(data.custom_text, 110, 140, 420, 0, FONT_NORMAL_BLACK, 0);
     } else {
-        text_draw_centered(data.custom_text, PANEL_X, BODY_Y, PANEL_WIDTH, FONT_NORMAL_BLACK, 0);
+        text_draw_centered(data.custom_text, 80, 140, 480, FONT_NORMAL_BLACK, 0);
     }
     if (data.checkbox_text) {
         if (data.checked) {
-            text_draw(string_from_ascii("x"), data.checkbox_start_width + 6, data.checkbox_y + 3, FONT_NORMAL_BLACK, 0);
+            text_draw(string_from_ascii("x"), data.checkbox_start_width + 6, 183, FONT_NORMAL_BLACK, 0);
         }
-        text_draw(data.checkbox_text, data.checkbox_start_width + 30, data.checkbox_y + 4, FONT_NORMAL_BLACK, 0);
+        text_draw(data.checkbox_text, data.checkbox_start_width + 30, 184, FONT_NORMAL_BLACK, 0);
     }
     graphics_reset_dialog();
 }
@@ -119,13 +94,12 @@ static void draw_foreground(void)
 {
     graphics_in_dialog();
     if (data.checkbox_text) {
-        button_border_draw(data.checkbox_start_width, data.checkbox_y, CHECKBOX_CHECK_SIZE, CHECKBOX_CHECK_SIZE,
-            data.has_focus);
+        button_border_draw(data.checkbox_start_width, 180, CHECKBOX_CHECK_SIZE, CHECKBOX_CHECK_SIZE, data.has_focus);
     }
     if (data.has_buttons) {
-        image_buttons_draw(PANEL_X, data.button_y_offset, buttons, 2);
+        image_buttons_draw(80, data.checkbox_text ? 110 : 90, buttons, 2);
     } else {
-        lang_text_draw_centered(13, 1, PANEL_X, data.button_y_offset + 118, PANEL_WIDTH, FONT_NORMAL_BLACK);
+        lang_text_draw_centered(13, 1, 80, 208, 480, FONT_NORMAL_BLACK);
     }
     graphics_reset_dialog();
 }
@@ -135,8 +109,8 @@ static void handle_input(const mouse *m, const hotkeys *h)
     if (data.checkbox_text && generic_buttons_handle_mouse(mouse_in_dialog(m), 0, 0, &checkbox, 1, &data.has_focus)) {
         return;
     }
-    if (data.has_buttons && image_buttons_handle_mouse(mouse_in_dialog(m), PANEL_X,
-        data.button_y_offset, buttons, 2, 0)) {
+    if (data.has_buttons && image_buttons_handle_mouse(mouse_in_dialog(m), 80,
+        data.checkbox_text ? 110 : 90, buttons, 2, 0)) {
         return;
     }
     if (input_go_back_requested(m, h)) {
