@@ -14,6 +14,7 @@
 #include "building/properties.h"
 #include "building/tavern.h"
 #include "building/temple.h"
+#include "building/highway_station.h"
 #include "building/warehouse.h"
 #include "city/buildings.h"
 #include "city/data_private.h"
@@ -36,8 +37,6 @@
 #include "map/terrain.h"
 #include "map/water.h"
 #include "scenario/scenario.h"
-
-
 
 #define BEGGAR_UNEMPLOYMENT_THRESHOLD 6
 
@@ -222,21 +221,46 @@ static void spawn_plebian(building *b)
     }
 }
 
-static int spawn_patrician(building *b, int spawned)
+static void spawn_patrician(building *b)
 {
     map_point road;
     if (map_has_road_access(b->x, b->y, b->size, &road)) {
         b->figure_spawn_delay++;
-        if (b->figure_spawn_delay > 40 && !spawned) {
+        if (b->figure_spawn_delay > 16) {
             b->figure_spawn_delay = 0;
             figure *f = figure_create(FIGURE_PATRICIAN, road.x, road.y, DIR_4_BOTTOM);
             f->action_state = FIGURE_ACTION_125_ROAMING;
             f->building_id = b->id;
             figure_movement_init_roaming(f);
-            return 1;
         }
     }
-    return spawned;
+}
+
+static void spawn_dog(building *b)
+{
+    map_point road;
+    if (map_has_road_access(b->x, b->y, b->size, &road)) {
+        b->figure_spawn_delay++;
+        if (b->figure_spawn_delay > 16) {
+            b->figure_spawn_delay = 0;
+            // base spawn chance
+            int chance = 10;
+            // 1x1 (not merged) houses spawn 4x less
+            if (!b->house_is_merged) {
+                chance /= 4;
+                if (chance < 1) {
+                    chance = 1;
+                }
+            }
+            // random spawn check
+            if (rand() % 100 < chance) {
+                figure *f = figure_create(FIGURE_DOG, road.x, road.y, DIR_4_BOTTOM);
+                f->action_state = FIGURE_ACTION_125_ROAMING;
+                f->building_id = b->id;
+                figure_movement_init_roaming(f);
+            }
+        }
+    }
 }
 
 static void spawn_figure_warehouse(building *b)
@@ -260,7 +284,7 @@ static void spawn_figure_warehouse(building *b)
         if (task != WAREHOUSE_TASK_NONE) {
             figure *f = figure_create(FIGURE_WAREHOUSEMAN, road.x, road.y, DIR_4_BOTTOM);
             f->action_state = FIGURE_ACTION_50_WAREHOUSEMAN_CREATED;
-            f->loads_sold_or_carrying = 0; // spawn with 0, load is decided by the action. 
+            f->loads_sold_or_carrying = 0; // spawn with 0, load is decided by the action.
             //this way we transfer resources from buildings to figures directly, without having to keep track
             if (task == WAREHOUSE_TASK_GETTING) {
                 f->resource_id = RESOURCE_NONE;
@@ -944,6 +968,27 @@ static void spawn_lighthouse_supplier(building *b, int x, int y)
     f->building_id = b->id;
     b->figure_id = f->id;
     f->collecting_item_id = RESOURCE_TIMBER; // Raw Resource
+    send_supplier_to_destination(f, dst_building_id);
+}
+
+static void spawn_highway_station_supplier(building *b, int x, int y)
+{
+    if (b->figure_id) {
+        figure *f = figure_get(b->figure_id);
+        if (f->state != FIGURE_STATE_ALIVE ||
+            (f->type != FIGURE_HIGHWAY_STATION_SUPPLIER && f->type != FIGURE_LABOR_SEEKER)) {
+            b->figure_id = 0;
+        }
+        return;
+    }
+    int dst_building_id = building_highway_station_get_storage_destination(b);
+    if (dst_building_id == 0) {
+        return;
+    }
+    figure *f = figure_create(FIGURE_HIGHWAY_STATION_SUPPLIER, x, y, DIR_0_TOP);
+    f->building_id = b->id;
+    b->figure_id = f->id;
+    f->collecting_item_id = b->data.market.fetch_inventory_id;
     send_supplier_to_destination(f, dst_building_id);
 }
 
@@ -1844,6 +1889,18 @@ static void spawn_figure_lighthouse(building *b)
     }
 }
 
+static void spawn_figure_highway_station(building *b)
+{
+    // The Highway Station has no dedicated supplier walker. Workcamp workers deliver
+    // stone and sand to it (see figure_workcamp_worker_action). We only need to
+    // recruit workforce for the building itself.
+    check_labor_problem(b);
+    map_point road;
+    if (map_has_road_access(b->x, b->y, b->size, &road)) {
+        spawn_labor_seeker(b, road.x, road.y, 100);
+    }
+}
+
 static void spawn_figure_watchtower(building *b)
 {
     check_labor_problem(b);
@@ -2013,7 +2070,6 @@ static void update_native_crop_progress(building *b)
 
 void building_figure_generate(void)
 {
-    int patrician_generated = 0;
     calculate_houses_needed_per_beggar();
     for (int i = 1; i < building_count(); i++) {
         building *b = building_get(i);
@@ -2028,17 +2084,31 @@ void building_figure_generate(void)
 
         b->has_problem = 0;
         // range of building types
+
         if (b->type >= BUILDING_HOUSE_SMALL_TENT && b->type <= BUILDING_HOUSE_GRAND_INSULA) {
             if (!config_get(CONFIG_GP_CH_HOUSING_DO_NOT_SPAWN_PLEBIANS) &&
-                config_get(CONFIG_GP_CH_GLOBAL_LABOUR)) {
+                config_get(CONFIG_GP_CH_GLOBAL_LABOUR) && b->size && b->house_population) {
                 spawn_plebian(b);
             }
+        }
+
+        if (b->type >= BUILDING_HOUSE_SMALL_TENT && b->type <= BUILDING_HOUSE_GRAND_INSULA) {
             if (city_labor_unemployment_percentage() > BEGGAR_UNEMPLOYMENT_THRESHOLD) {
                 spawn_beggar(b);
             }
-        } else if (b->type >= BUILDING_HOUSE_SMALL_VILLA && b->type <= BUILDING_HOUSE_LUXURY_PALACE) {
-            patrician_generated = spawn_patrician(b, patrician_generated);
-        } else if (building_is_raw_resource_producer(b->type) ||
+        }
+
+        if (b->type >= BUILDING_HOUSE_SMALL_VILLA && b->type <= BUILDING_HOUSE_LUXURY_PALACE) {
+            spawn_patrician(b);
+        }
+
+        if (b->type >= BUILDING_HOUSE_SMALL_TENT && b->type <= BUILDING_HOUSE_LUXURY_PALACE) {
+            if (!config_get(CONFIG_GP_CH_HOUSING_DO_NOT_SPAWN_DOGS) && b->size && b->house_population) {
+                spawn_dog(b);
+            }
+        }
+
+        if (building_is_raw_resource_producer(b->type) ||
             building_is_farm(b->type) || building_is_workshop(b->type)) {
             spawn_figure_industry(b);
         } else if (b->type >= BUILDING_SENATE_1_UNUSED && b->type <= BUILDING_FORUM_2_UNUSED) {
@@ -2174,6 +2244,9 @@ void building_figure_generate(void)
                     break;
                 case BUILDING_LIGHTHOUSE:
                     spawn_figure_lighthouse(b);
+                    break;
+                case BUILDING_HIGHWAY_STATION:
+                    spawn_figure_highway_station(b);
                     break;
                 case BUILDING_TAVERN:
                     spawn_figure_tavern(b);
