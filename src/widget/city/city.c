@@ -4,6 +4,7 @@
 #include "building/copy_cursor.h"
 #include "building/properties.h"
 #include "building/rotation.h"
+#include "city/buildings.h"
 #include "city/finance.h"
 #include "city/view.h"
 #include "city/warning.h"
@@ -143,6 +144,12 @@ void widget_city_draw_construction_cost_and_size(void)
     }
     int size_x, size_y;
     int cost = building_construction_cost();
+
+    if (building_construction_type() == BUILDING_HIGHWAY &&
+        city_buildings_has_working_highway_station()) {
+        cost /= 2;
+    }
+
     int has_size = building_construction_size(&size_x, &size_y);
     if (!cost && !has_size) {
         return;
